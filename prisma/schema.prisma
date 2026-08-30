@@ -1,0 +1,129 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+  output          = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Status {
+  confirmed
+  cancelled
+  completed
+
+  @@map("status")
+}
+
+enum Platform {
+  zoom
+  meet
+  physical
+
+  @@map("platform")
+}
+
+model User {
+  userId       Int      @id @default(autoincrement())
+  username     String   @unique @db.VarChar(50)
+  email        String   @unique @db.VarChar(254)
+  passwordHash String
+  createdAt    DateTime @default(now()) @db.Timestamptz()
+  updatedAt    DateTime @updatedAt @db.Timestamptz()
+
+  events         Event[]
+  bookings       Booking[]
+  oauthAccounts  OauthAccount[]
+  availabilities Availability[]
+
+  @@map("users")
+}
+
+model Event {
+  eventId      Int      @id @default(autoincrement())
+  hostId       Int
+  title        String   @db.VarChar(100)
+  slug         String   @db.VarChar(60)
+  description  String?  @db.VarChar(1000)
+  durationMins Int      @default(30)
+  platform     Platform @default(zoom)
+  location     String?  @db.VarChar(100) 
+  timezone     String   @default("UTC")
+  minNoticeMins     Int      @default(240) // Minimum notice in minutes (e.g., 240 mins = 4 hours before slot)
+  rollingWindowDays Int      @default(60)  // How far into the future guests can book (e.g., max 60 days ahead)
+  createdAt    DateTime @default(now()) @db.Timestamptz()
+  updatedAt    DateTime @updatedAt @db.Timestamptz()
+
+  host     User      @relation(fields: [hostId], references: [userId], onDelete: Cascade)
+  bookings Booking[]
+
+  @@unique([hostId, slug])
+  @@map("events")
+}
+
+model Availability {
+  availabilityId Int      @id @default(autoincrement())
+  userId         Int      
+  dayOfWeek      Int      @db.SmallInt
+  startTime      DateTime @db.Time()
+  endTime        DateTime @db.Time()
+
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([userId, dayOfWeek])
+  @@map("availabilities")
+}
+
+model Booking {
+  bookingId     Int      @id @default(autoincrement())
+  eventId       Int
+  hostId        Int
+  guestName     String   @db.VarChar(100)
+  guestEmail    String   @db.VarChar(254)
+  guestTimezone String
+  startsAt      DateTime @db.Timestamptz()
+  endsAt        DateTime @db.Timestamptz()
+  status        Status   @default(confirmed)
+  meetingUrl    String?
+  providerEventId String?
+  synced        Boolean  @default(false)
+  notes         String?  @db.VarChar(2000)
+  createdAt     DateTime @default(now()) @db.Timestamptz()
+  updatedAt     DateTime @updatedAt @db.Timestamptz()
+
+  event Event @relation(fields: [eventId], references: [eventId], onDelete: Restrict)
+  host  User  @relation(fields: [hostId], references: [userId], onDelete: Restrict)
+
+  @@index([hostId, startsAt])
+  @@map("bookings")
+}
+
+model OauthAccount {
+  oauthAccountId    Int       @id @default(autoincrement())
+  userId            Int
+  provider          String
+  providerAccountId String
+  accessToken       String
+  refreshToken      String?
+  expiresAt         DateTime? @db.Timestamptz()
+  scope             String?
+  createdAt         DateTime  @default(now()) @db.Timestamptz()
+  updatedAt         DateTime  @updatedAt @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@unique([userId, provider])
+  @@map("oauthaccounts")
+}
+
+model BlacklistedToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
