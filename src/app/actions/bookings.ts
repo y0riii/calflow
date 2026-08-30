@@ -158,8 +158,8 @@ export async function createBookingAction(data: CreateBookingInput): Promise<Cre
             : event.platform === 'zoom' ? 'Zoom Video (Pending Link)'
             : event.location || 'In-Person Meeting';
 
-        // Trigger emails (fire-and-forget: never crash the booking on email failure)
-        void sendBookingCreatedEmails({
+        // Trigger emails (await to ensure execution in serverless environments like Vercel)
+        await sendBookingCreatedEmails({
             bookingId: booking.bookingId,
             eventTitle: event.title,
             hostName: `@${event.host.username}`,
@@ -491,8 +491,8 @@ export async function cancelBookingAction(bookingId: number, reason: string) {
             }
         }
 
-        // Trigger cancel emails (fire-and-forget: never fail the cancel on email error)
-        void sendBookingCancelledEmails({
+        // Trigger cancel emails (await to ensure execution in serverless environments like Vercel)
+        await sendBookingCancelledEmails({
             bookingId: booking.bookingId,
             eventTitle: booking.event.title,
             hostName: `@${booking.host.username}`,
@@ -599,8 +599,8 @@ export async function rescheduleBookingAction(bookingId: number, newStartsAt: st
             : booking.event.platform === 'zoom' ? 'Zoom Video'
             : booking.event.location || 'In-Person Meeting';
 
-        // Trigger reschedule emails (fire-and-forget: never fail the reschedule on email error)
-        void sendBookingRescheduledEmails({
+        // Trigger reschedule emails (await to ensure execution in serverless environments like Vercel)
+        await sendBookingRescheduledEmails({
             bookingId: booking.bookingId,
             eventTitle: booking.event.title,
             hostName: `@${booking.host.username}`,

@@ -61,7 +61,7 @@ const INITIAL_USER = {
 const INITIAL_ZOOM: ZoomConfig = {
   connected: false,
   email: '',
-  autoGenerateLinks: false,
+  autoGenerateLinks: true,
 };
 
 const INITIAL_AVAILABILITY: DayAvailability[] = [

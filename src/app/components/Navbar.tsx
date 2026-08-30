@@ -40,7 +40,7 @@ export default function Navbar() {
           </Link>
 
           {/* Center Navigation Tabs */}
-          <nav className="hidden md:flex items-center space-x-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200">
+          <nav className="flex items-center space-x-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200 overflow-x-auto max-w-[50vw] sm:max-w-none hide-scrollbar">
             <button
               onClick={() => handleTabClick('events')}
               className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
@@ -50,7 +50,7 @@ export default function Navbar() {
               }`}
             >
               <Layers className="w-4 h-4" />
-              <span>Event Types</span>
+              <span className="hidden sm:inline">Event Types</span>
             </button>
 
             <button
@@ -62,7 +62,7 @@ export default function Navbar() {
               }`}
             >
               <Clock className="w-4 h-4" />
-              <span>Bookings</span>
+              <span className="hidden sm:inline">Bookings</span>
             </button>
 
             <button
@@ -74,7 +74,7 @@ export default function Navbar() {
               }`}
             >
               <Calendar className="w-4 h-4" />
-              <span>Availability</span>
+              <span className="hidden sm:inline">Availability</span>
             </button>
           </nav>
 

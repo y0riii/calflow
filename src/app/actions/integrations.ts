@@ -30,16 +30,27 @@ export async function getConnectedIntegrationsAction() {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return { success: false, integrations: [] };
+      return { success: false, integrations: [], details: {} };
     }
 
     const accounts = await prisma.oauthAccount.findMany({
       where: { userId: parseInt(user.id) },
-      select: { provider: true },
+      select: { provider: true, providerAccount: true },
     });
 
-    return { success: true, integrations: accounts.map((a) => a.provider) };
+    const details: Record<string, { email: string }> = {};
+    accounts.forEach((a) => {
+      details[a.provider] = {
+        email: a.providerAccount && a.providerAccount !== 'zoom' && a.providerAccount !== 'google' ? a.providerAccount : user.email,
+      };
+    });
+
+    return {
+      success: true,
+      integrations: accounts.map((a) => a.provider),
+      details,
+    };
   } catch (err) {
-    return { success: false, integrations: [] };
+    return { success: false, integrations: [], details: {} };
   }
 }

@@ -81,6 +81,17 @@ export default function DashboardPage() {
     setIsModalOpen(true);
   };
 
+  if (isLoadingEvents) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          <span className="text-sm font-semibold text-slate-500">Loading your workspace...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       {/* Top Navbar */}

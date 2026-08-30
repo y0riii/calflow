@@ -184,10 +184,9 @@ export default function BookingClient({ eventSlug, username }: BookingClientProp
   };
 
   const getPlatformLabel = (platform: string, location: string | null) => {
-    if (platform === 'meet') return 'Google Meet (Auto-Generated Link)';
-    if (platform === 'zoom') return 'Zoom Video (Auto-Generated Link)';
-    if (platform === 'physical') return location || 'In-Person Meeting';
-    return location || 'Custom Video Link';
+    if (platform === 'meet') return 'Google Meet';
+    if (platform === 'zoom') return 'Zoom Video';
+    return location || 'In-Person Meeting';
   };
 
   // Calendar rendering helpers
@@ -267,7 +266,7 @@ export default function BookingClient({ eventSlug, username }: BookingClientProp
 
         <div className="grid grid-cols-1 md:grid-cols-12 min-h-[520px]">
           {/* Left Sidebar */}
-          <div className="md:col-span-4 p-6 sm:p-8 border-r border-slate-200 bg-slate-50/60 space-y-6 flex flex-col justify-between">
+          <div className="md:col-span-4 p-6 sm:p-8 border-b md:border-r md:border-b-0 border-slate-200 bg-slate-50/60 space-y-6 flex flex-col justify-between">
             <div className="space-y-5">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-sm shrink-0">

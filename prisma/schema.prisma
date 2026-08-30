@@ -102,20 +102,20 @@ model Booking {
 }
 
 model OauthAccount {
-  oauthAccountId    Int       @id @default(autoincrement())
-  userId            Int
-  provider          String
-  providerAccountId String
-  accessToken       String
-  refreshToken      String?
-  expiresAt         DateTime? @db.Timestamptz()
-  scope             String?
-  createdAt         DateTime  @default(now()) @db.Timestamptz()
-  updatedAt         DateTime  @updatedAt @db.Timestamptz()
+  oauthAccountId  Int       @id @default(autoincrement())
+  userId          Int
+  provider        String
+  providerAccount String
+  accessToken     String
+  refreshToken    String?
+  expiresAt       DateTime? @db.Timestamptz()
+  scope           String?
+  createdAt       DateTime  @default(now()) @db.Timestamptz()
+  updatedAt       DateTime  @updatedAt @db.Timestamptz()
 
   user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
-  @@unique([provider, providerAccountId])
+  @@unique([provider, providerAccount])
   @@unique([userId, provider])
   @@map("oauthaccounts")
 }

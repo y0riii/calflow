@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Navbar from '@/app/components/Navbar';
 import { useAppStore } from '@/lib/useStore';
-import { updateUserAction, logoutAction } from '@/app/actions/authentication';
+import { updateUserAction, logoutAction, getCurrentUser } from '@/app/actions/authentication';
 import { disconnectIntegrationAction, getConnectedIntegrationsAction } from '@/app/actions/integrations';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
@@ -33,6 +33,8 @@ export default function ProfilePage() {
 
   const router = useRouter();
 
+  const [isLoading, setIsLoading] = useState(true);
+
   // Profile Form State
   const [name, setName] = useState(user.name);
   const [username, setUsername] = useState(user.username);
@@ -45,15 +47,45 @@ export default function ProfilePage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const [connectedIntegrations, setConnectedIntegrations] = useState<string[]>([]);
+  const [integrationDetails, setIntegrationDetails] = useState<Record<string, { email: string }>>({});
   const [isDisconnecting, setIsDisconnecting] = useState<string | null>(null);
 
   useEffect(() => {
-    getConnectedIntegrationsAction().then(res => {
-      if (res.success && res.integrations) {
-        setConnectedIntegrations(res.integrations);
+    async function loadData() {
+      try {
+        const [integrationsRes, userRes] = await Promise.all([
+          getConnectedIntegrationsAction(),
+          getCurrentUser(),
+        ]);
+
+        if (userRes) {
+          updateUser({
+            name: userRes.username,
+            username: userRes.username,
+            email: userRes.email,
+          });
+          setName(userRes.username);
+          setUsername(userRes.username);
+          setEmail(userRes.email);
+        }
+
+        if (integrationsRes.success && integrationsRes.integrations) {
+          setConnectedIntegrations(integrationsRes.integrations);
+          if (integrationsRes.details) {
+            setIntegrationDetails(integrationsRes.details);
+          }
+          if (integrationsRes.integrations.includes('zoom')) {
+            setZoomConnected(true);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading profile", err);
+      } finally {
+        setIsLoading(false);
       }
-    });
-  }, []);
+    }
+    loadData();
+  }, [setZoomConnected, updateUser]);
 
   const handleDisconnect = async (provider: 'google' | 'zoom') => {
     setIsDisconnecting(provider);
@@ -111,6 +143,17 @@ export default function ProfilePage() {
       setIsLoggingOut(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          <span className="text-sm font-semibold text-slate-500">Loading your profile...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
@@ -177,7 +220,7 @@ export default function ProfilePage() {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Username (Public Booking Slug Header)
+                    Username
                   </label>
                   <div className="relative">
                     <span className="text-xs font-bold text-slate-400 absolute left-3 top-1/2 -translate-y-1/2">
@@ -312,9 +355,17 @@ export default function ProfilePage() {
 
               {connectedIntegrations.includes('zoom') ? (
                 <div className="space-y-4">
-                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
-                    <span className="text-slate-500 font-semibold block text-[11px]">Status:</span>
-                    <span className="font-bold text-slate-900 block">Active Zoom Integration</span>
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-1">
+                    <div>
+                      <span className="text-slate-500 font-semibold text-[11px] block">Status:</span>
+                      <span className="font-bold text-slate-900 block">Active Zoom Integration</span>
+                    </div>
+                    {integrationDetails.zoom?.email && (
+                      <div>
+                        <span className="text-slate-500 font-semibold text-[11px] block">Connected Account:</span>
+                        <span className="font-bold text-cyan-700 block truncate">{integrationDetails.zoom.email}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Zoom Auto Generate Toggle */}

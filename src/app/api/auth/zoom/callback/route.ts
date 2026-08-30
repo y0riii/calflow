@@ -44,6 +44,19 @@ export async function GET(request: Request) {
     }
 
     if (tokenData.refresh_token) {
+      let zoomEmail = user.email;
+      try {
+        const meRes = await fetch("https://api.zoom.us/v2/users/me", {
+          headers: { Authorization: `Bearer ${tokenData.access_token}` },
+        });
+        if (meRes.ok) {
+          const meData = await meRes.json();
+          if (meData.email) zoomEmail = meData.email;
+        }
+      } catch (err) {
+        console.error("Error fetching Zoom profile email:", err);
+      }
+
       // Upsert the OAuth account
       await prisma.oauthAccount.upsert({
         where: {
@@ -55,11 +68,12 @@ export async function GET(request: Request) {
         update: {
           accessToken: tokenData.access_token,
           refreshToken: tokenData.refresh_token,
+          providerAccount: zoomEmail,
         },
         create: {
           userId: parseInt(user.id),
           provider: "zoom",
-          providerAccountId: "zoom",
+          providerAccount: zoomEmail,
           accessToken: tokenData.access_token,
           refreshToken: tokenData.refresh_token,
         },
