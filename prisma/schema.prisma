@@ -31,6 +31,7 @@ model User {
   username     String   @unique @db.VarChar(50)
   email        String   @unique @db.VarChar(254)
   passwordHash String
+  timezone     String   @default("America/New_York") @db.VarChar(50)
   createdAt    DateTime @default(now()) @db.Timestamptz()
   updatedAt    DateTime @updatedAt @db.Timestamptz()
 

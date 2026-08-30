@@ -32,6 +32,7 @@ export default function DashboardPage() {
             name: userRes.username,
             username: userRes.username,
             email: userRes.email,
+            timezone: userRes.timezone || 'America/New_York',
           });
         }
 

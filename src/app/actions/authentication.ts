@@ -224,6 +224,7 @@ type User = {
     id: string;
     username: string;
     email: string;
+    timezone?: string;
 }
 
 export async function getCurrentUser(): Promise<User | null> {
@@ -244,11 +245,17 @@ export async function getCurrentUser(): Promise<User | null> {
       return null;
     }
 
-    // 3. Return user directly from payload
+    // 3. Fetch timezone from database
+    const dbUser = await prisma.user.findUnique({
+      where: { userId: typeof payload.userId === 'string' ? parseInt(payload.userId) : payload.userId },
+      select: { timezone: true },
+    });
+
     return {
-      id: payload.userId as string,
+      id: String(payload.userId),
       username: payload.username as string,
       email: payload.email as string,
+      timezone: dbUser?.timezone || 'America/New_York',
     };
   } catch (error) {
     return null;
@@ -261,7 +268,7 @@ export type UpdateUserResponse = {
   user?: User;
 };
 
-export async function updateUserAction(data: { username?: string; email?: string }): Promise<UpdateUserResponse> {
+export async function updateUserAction(data: { username?: string; email?: string; timezone?: string }): Promise<UpdateUserResponse> {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
@@ -269,7 +276,7 @@ export async function updateUserAction(data: { username?: string; email?: string
     }
 
     const userId = parseInt(currentUser.id);
-    const updateData: { username?: string; email?: string } = {};
+    const updateData: { username?: string; email?: string; timezone?: string } = {};
 
     if (data.username && data.username !== currentUser.username) {
       const existingUser = await prisma.user.findFirst({
@@ -289,6 +296,10 @@ export async function updateUserAction(data: { username?: string; email?: string
         return { success: false, message: "Email is already in use." };
       }
       updateData.email = data.email;
+    }
+
+    if (data.timezone && data.timezone !== currentUser.timezone) {
+      updateData.timezone = data.timezone;
     }
 
     if (Object.keys(updateData).length === 0) {

@@ -63,10 +63,12 @@ export default function ProfilePage() {
             name: userRes.username,
             username: userRes.username,
             email: userRes.email,
+            timezone: userRes.timezone || 'America/New_York',
           });
           setName(userRes.username);
           setUsername(userRes.username);
           setEmail(userRes.email);
+          setTimezone(userRes.timezone || 'America/New_York');
         }
 
         if (integrationsRes.success && integrationsRes.integrations) {
@@ -105,7 +107,7 @@ export default function ProfilePage() {
     setSavedSuccess(false);
 
     try {
-      const res = await updateUserAction({ username, email });
+      const res = await updateUserAction({ username, email, timezone });
       if (res.success) {
         updateUser({
           name,
