@@ -146,7 +146,7 @@ export async function sendBookingCreatedEmails(booking: BookingDetails): Promise
         ${detailRow('Event', booking.eventTitle)}
         ${detailRow('Date & Time', formatDate(booking.startsAt, tz))}
         ${detailRow('Duration', `Until ${formatDate(booking.endsAt, tz)}`)}
-        ${detailRow('Location', booking.locationLabel)}
+        ${detailRow(booking.meetingUrl ? 'Meeting Link' : 'Location', booking.locationLabel)}
         ${booking.notes ? detailRow('Notes', booking.notes) : ''}
         ${detailRow('Reschedule', `<a href="${links.reschedule}" style="color:#2563eb;font-weight:600;word-break:break-all;">${links.reschedule}</a>`)}
         ${detailRow('Cancel', `<a href="${links.cancel}" style="color:#dc2626;font-weight:600;word-break:break-all;">${links.cancel}</a>`)}
@@ -206,7 +206,7 @@ export async function sendBookingRescheduledEmails(booking: BookingDetails, oldS
         ${detailRow('Event', booking.eventTitle)}
         ${detailRow('Previous Time', `<s style="color:#94a3b8;">${formatDate(oldStartsAt, tz)}</s>`)}
         ${detailRow('New Time', `<strong style="color:#16a34a;">${formatDate(booking.startsAt, tz)}</strong>`)}
-        ${detailRow('Location', booking.locationLabel)}
+        ${detailRow(booking.meetingUrl ? 'Meeting Link' : 'Location', booking.locationLabel)}
         ${detailRow('Manage Booking', `<a href="${links.reschedule}" style="color:#0891b2;font-weight:600;word-break:break-all;">${links.reschedule}</a>`)}
       </table>`;
 
