@@ -34,6 +34,8 @@ export interface Booking {
   meetingUrl: string;
   notes?: string;
   cancelReason?: string;
+  synced?: boolean;
+  syncedWithGoogle?: boolean;
 }
 
 export interface ZoomConfig {

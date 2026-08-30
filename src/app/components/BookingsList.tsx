@@ -330,10 +330,10 @@ export default function BookingsList() {
                         Canceled Booking
                       </span>
                     )}
-                    {selectedBookingForDetails.syncedWithGoogle && (
+                    {(selectedBookingForDetails.syncedWithGoogle || selectedBookingForDetails.synced) && (
                       <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold flex items-center space-x-1">
                         <CheckCircle2 className="w-3 h-3" />
-                        <span>Google Calendar Synced</span>
+                        <span>Calendar Synced</span>
                       </span>
                     )}
                   </div>
