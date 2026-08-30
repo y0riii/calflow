@@ -20,6 +20,7 @@ import {
   X,
   Info,
   CheckCircle2,
+  Loader2,
 } from 'lucide-react';
 
 import { cancelBookingAction, rescheduleBookingAction } from '@/app/actions/bookings';
@@ -41,6 +42,8 @@ export default function BookingsList() {
   // Cancel Modal State
   const [selectedBookingForCancel, setSelectedBookingForCancel] = useState<Booking | null>(null);
   const [cancelReason, setCancelReason] = useState('');
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [isRescheduling, setIsRescheduling] = useState(false);
 
   const filteredBookings = bookings.filter((b) => {
     const matchesSearch =
@@ -64,37 +67,47 @@ export default function BookingsList() {
 
   const handleConfirmCancel = async () => {
     if (selectedBookingForCancel) {
-      const numericId = parseInt(selectedBookingForCancel.id.replace(/\D+/g, ''), 10) || parseInt(selectedBookingForCancel.id, 10);
-      const reason = cancelReason || 'Canceled by host';
-      
-      cancelBooking(selectedBookingForCancel.id, reason);
-      if (numericId) {
-        await cancelBookingAction(numericId, reason);
+      setIsCancelling(true);
+      try {
+        const numericId = parseInt(selectedBookingForCancel.id.replace(/\D+/g, ''), 10) || parseInt(selectedBookingForCancel.id, 10);
+        const reason = cancelReason || 'Canceled by host';
+        
+        cancelBooking(selectedBookingForCancel.id, reason);
+        if (numericId) {
+          await cancelBookingAction(numericId, reason);
+        }
+        
+        setSelectedBookingForCancel(null);
+        if (selectedBookingForDetails?.id === selectedBookingForCancel.id) {
+          setSelectedBookingForDetails(null);
+        }
+        setCancelReason('');
+      } finally {
+        setIsCancelling(false);
       }
-      
-      setSelectedBookingForCancel(null);
-      if (selectedBookingForDetails?.id === selectedBookingForCancel.id) {
-        setSelectedBookingForDetails(null);
-      }
-      setCancelReason('');
     }
   };
 
   const handleConfirmReschedule = async () => {
     if (selectedBookingForReschedule) {
-      const newStartsAt = new Date(`${rescheduleDate}T${rescheduleTime}:00`).toISOString();
-      const durationMins = 30;
-      const newEndsAt = new Date(new Date(newStartsAt).getTime() + durationMins * 60000).toISOString();
-      const numericId = parseInt(selectedBookingForReschedule.id.replace(/\D+/g, ''), 10) || parseInt(selectedBookingForReschedule.id, 10);
+      setIsRescheduling(true);
+      try {
+        const newStartsAt = new Date(`${rescheduleDate}T${rescheduleTime}:00`).toISOString();
+        const durationMins = 30;
+        const newEndsAt = new Date(new Date(newStartsAt).getTime() + durationMins * 60000).toISOString();
+        const numericId = parseInt(selectedBookingForReschedule.id.replace(/\D+/g, ''), 10) || parseInt(selectedBookingForReschedule.id, 10);
 
-      rescheduleBooking(selectedBookingForReschedule.id, newStartsAt, newEndsAt);
-      if (numericId) {
-        await rescheduleBookingAction(numericId, newStartsAt, newEndsAt);
-      }
+        rescheduleBooking(selectedBookingForReschedule.id, newStartsAt, newEndsAt);
+        if (numericId) {
+          await rescheduleBookingAction(numericId, newStartsAt, newEndsAt);
+        }
 
-      setSelectedBookingForReschedule(null);
-      if (selectedBookingForDetails?.id === selectedBookingForReschedule.id) {
-        setSelectedBookingForDetails(null);
+        setSelectedBookingForReschedule(null);
+        if (selectedBookingForDetails?.id === selectedBookingForReschedule.id) {
+          setSelectedBookingForDetails(null);
+        }
+      } finally {
+        setIsRescheduling(false);
       }
     }
   };
@@ -558,9 +571,17 @@ export default function BookingsList() {
               </button>
               <button
                 onClick={handleConfirmReschedule}
-                className="px-4 py-2 rounded-xl bg-blue-600 text-xs font-bold text-white hover:bg-blue-500"
+                disabled={isRescheduling}
+                className="flex items-center space-x-1 px-4 py-2 rounded-xl bg-blue-600 text-xs font-bold text-white hover:bg-blue-500 disabled:opacity-60 transition"
               >
-                Confirm Reschedule
+                {isRescheduling ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <span>Confirm Reschedule</span>
+                )}
               </button>
             </div>
           </div>
@@ -602,9 +623,17 @@ export default function BookingsList() {
               </button>
               <button
                 onClick={handleConfirmCancel}
-                className="px-4 py-2 rounded-xl bg-rose-600 text-xs font-bold text-white hover:bg-rose-500"
+                disabled={isCancelling}
+                className="flex items-center space-x-1 px-4 py-2 rounded-xl bg-rose-600 text-xs font-bold text-white hover:bg-rose-500 disabled:opacity-60 transition"
               >
-                Cancel Booking
+                {isCancelling ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <span>Cancel Booking</span>
+                )}
               </button>
             </div>
           </div>

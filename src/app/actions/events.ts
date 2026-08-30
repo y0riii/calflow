@@ -385,6 +385,7 @@ export async function getMyBookings() {
             meetingUrl: b.meetingUrl || '',
             syncedWithGoogle: b.synced,
             notes: b.notes || '',
+            cancelReason: b.cancelReason || '',
         }));
 
         return { success: true, bookings: formattedBookings };

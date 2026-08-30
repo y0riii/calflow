@@ -464,6 +464,7 @@ export async function cancelBookingAction(bookingId: number, reason: string) {
             where: { bookingId },
             data: {
                 status: 'cancelled',
+                cancelReason: reason,
             }
         });
 
