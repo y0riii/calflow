@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     }
 
     // Must exactly match the URI registered in Zoom Developer Console
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const appUrl = process.env.MAIN_APP_URL || "http://localhost:3000";
     const redirectUri = `${appUrl}/api/auth/zoom/callback`;
 
     // Use URLSearchParams for proper encoding — avoids slash/encoding mismatches
