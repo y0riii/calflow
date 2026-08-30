@@ -4,9 +4,12 @@ import { Pool } from 'pg';
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 // 1. Create a pg Pool instance
 const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL 
+  connectionString: process.env.DATABASE_URL,
+  ...(isProduction ? { ssl: { rejectUnauthorized: false } } : {})
 });
 
 // 2. Pass the Pool instance to the adapter

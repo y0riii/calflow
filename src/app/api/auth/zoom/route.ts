@@ -2,18 +2,34 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/app/actions/authentication";
 
 export async function GET(request: Request) {
-  const user = await getCurrentUser();
-  if (!user) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+
+    const clientId = process.env.ZOOM_CLIENT_ID;
+    if (!clientId) {
+      console.error("ZOOM_CLIENT_ID is not configured.");
+      return NextResponse.redirect(new URL("/profile?error=ZoomNotConfigured", request.url));
+    }
+
+    // Must exactly match the URI registered in Zoom Developer Console
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const redirectUri = `${appUrl}/api/auth/zoom/callback`;
+
+    // Use URLSearchParams for proper encoding — avoids slash/encoding mismatches
+    const params = new URLSearchParams({
+      response_type: "code",
+      client_id: clientId,
+      redirect_uri: redirectUri,
+    });
+
+    const zoomAuthUrl = `https://zoom.us/oauth/authorize?${params.toString()}`;
+
+    return NextResponse.redirect(zoomAuthUrl);
+  } catch (error) {
+    console.error("Error initiating Zoom OAuth:", error);
+    return NextResponse.redirect(new URL("/profile?error=ServerError", request.url));
   }
-
-  const clientId = process.env.ZOOM_CLIENT_ID;
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/auth/zoom/callback`;
-
-  const authUrl = new URL("https://zoom.us/oauth/authorize");
-  authUrl.searchParams.set("client_id", clientId || "");
-  authUrl.searchParams.set("response_type", "code");
-  authUrl.searchParams.set("redirect_uri", redirectUri);
-
-  return NextResponse.redirect(authUrl.toString());
 }

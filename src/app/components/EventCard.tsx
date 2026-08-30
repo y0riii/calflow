@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { EventType } from '@/lib/mockData';
+import { EventType } from '@/lib/useStore';
 import { useAppStore } from '@/lib/useStore';
 import { deleteEvent } from '@/app/actions/events';
 import {
@@ -24,22 +24,22 @@ interface EventCardProps {
 }
 
 export default function EventCard({ event, onEdit }: EventCardProps) {
-  const { deleteEventType, bookings } = useAppStore();
+  const { deleteEventType, bookings, user } = useAppStore();
   const [copied, setCopied] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const upcomingBookingsCount =
-    bookings.filter(
-      (b) =>
-        (b.eventTypeId === event.id || b.eventTypeId === event.slug || b.eventTitle === event.title) &&
-        b.status === 'confirmed'
-    ).length || event.bookingCount || 0;
+  const upcomingBookingsCount = bookings.filter(
+    (b) =>
+      (b.eventTypeId === event.id || b.eventTypeId === event.slug || b.eventTitle === event.title) &&
+      b.status === 'confirmed' &&
+      new Date(b.startsAt).getTime() >= Date.now()
+  ).length;
 
   const handleDelete = async () => {
     if (isDeleting) return;
     setIsDeleting(true);
     try {
-      const numericId = parseInt(event.id.replace(/^\D+/g, ''), 10) || 1;
+      const numericId = parseInt(event.id, 10);
       const res = await deleteEvent(numericId);
       if (res.success) {
         deleteEventType(event.id);
@@ -57,13 +57,6 @@ export default function EventCard({ event, onEdit }: EventCardProps) {
 
   const getPlatformBadge = () => {
     switch (event.platform) {
-      case 'meet':
-        return (
-          <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold">
-            <Video className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Google Meet</span>
-          </div>
-        );
       case 'zoom':
         return (
           <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold">
@@ -99,7 +92,7 @@ export default function EventCard({ event, onEdit }: EventCardProps) {
   };
 
   const handleCopyLink = () => {
-    const url = `${window.location.origin}/book/${event.slug}`;
+    const url = `${window.location.origin}/book/${user.username}/${event.slug}`;
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -183,7 +176,7 @@ export default function EventCard({ event, onEdit }: EventCardProps) {
             ) : (
               <>
                 <Copy className="w-3.5 h-3.5" />
-                <span>Copy Link</span>
+                <span>Copy Booking Link</span>
               </>
             )}
           </button>

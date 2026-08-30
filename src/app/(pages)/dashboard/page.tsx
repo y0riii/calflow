@@ -7,7 +7,7 @@ import CreateEventModal from '@/app/components/CreateEventModal';
 import BookingsList from '@/app/components/BookingsList';
 import AvailabilityEditor from '@/app/components/AvailabilityEditor';
 import { useAppStore } from '@/lib/useStore';
-import { EventType } from '@/lib/mockData';
+import { EventType } from '@/lib/useStore';
 import { getMyEvents, getMyBookings } from '@/app/actions/events';
 import { getCurrentUser } from '@/app/actions/authentication';
 import { Plus, Layers, Loader2 } from 'lucide-react';
@@ -36,8 +36,8 @@ export default function DashboardPage() {
         }
 
         if (eventsRes.success && 'events' in eventsRes && eventsRes.events) {
-          const loadedEvents: EventType[] = eventsRes.events.map((e, index) => ({
-            id: `evt_${index + 1}`,
+          const loadedEvents: EventType[] = eventsRes.events.map((e) => ({
+            id: String(e.eventId),
             title: e.title,
             slug: e.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
             description: e.description || '',
@@ -67,10 +67,9 @@ export default function DashboardPage() {
     loadData();
   }, [setEventTypes, setBookings, updateUser]);
 
-  const upcomingBookingsCount = Math.max(
-    bookings.filter((b) => b.status === 'confirmed').length,
-    eventTypes.reduce((acc, evt) => acc + (evt.bookingCount || 0), 0)
-  );
+  const upcomingBookingsCount = bookings.filter(
+    (b) => b.status === 'confirmed' && new Date(b.startsAt).getTime() >= Date.now()
+  ).length;
 
   const handleOpenCreateModal = () => {
     setEditingEvent(null);

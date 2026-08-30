@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useAppStore } from '@/lib/useStore';
 import { getAvailablity, updateAvailability } from '@/app/actions/events';
 import { weeklyAvailabilitySchema, type WeeklyAvailabilityInput } from '@/app/schemas/events';
-import { DayAvailability } from '@/lib/mockData';
+import { DayAvailability } from '@/lib/useStore';
 import { Clock, Plus, Trash2, Globe, Loader2, Save, CheckCircle2, AlertCircle } from 'lucide-react';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];

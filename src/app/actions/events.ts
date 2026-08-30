@@ -24,7 +24,7 @@ export async function createEvent(data: z.infer<typeof createEventSchema>) {
     try {
         const currentUser = await getCurrentUser();
         if (!currentUser) {
-            return { success: false, message: "You must be logged in to create an event type" };
+            return { success: false, message: "You must be logged in to create an event type." };
         }
 
         const availabilitiesCount = await prisma.availability.count({
@@ -36,10 +36,12 @@ export async function createEvent(data: z.infer<typeof createEventSchema>) {
 
         const validation = createEventSchema.safeParse(data);
         if (!validation.success) {
+            const formattedErrors = validation.error.flatten().fieldErrors;
+            const firstErrorMsg = Object.values(formattedErrors).flat().find(Boolean);
             return { 
                 success: false, 
-                message: "Invalid data provided",
-                errors: validation.error.flatten().fieldErrors
+                message: firstErrorMsg || "Invalid event data provided.",
+                errors: formattedErrors
             };
         }
         let { title, description, duration, platform, location, minNoticeMins, rollingWindowDays } = validation.data;
@@ -51,7 +53,7 @@ export async function createEvent(data: z.infer<typeof createEventSchema>) {
             },
         });
         if (existingEvent) {
-            return { success: false, message: "Event type already exists" };
+            return { success: false, message: `An event type named "${title}" already exists on your account. Please choose a different title.` };
         }
         const eventType = await prisma.event.create({
             data: {
@@ -69,7 +71,7 @@ export async function createEvent(data: z.infer<typeof createEventSchema>) {
         return { success: true, eventType };
     } catch (error) {
         console.error("Error creating event type:", error);
-        return { success: false, message: "An unexpected error occurred" };
+        return { success: false, message: "An unexpected error occurred while creating the event type." };
     }
 }
 
@@ -77,26 +79,47 @@ export async function updateEvent(eventId: number, data: z.infer<typeof createEv
     try {
         const currentUser = await getCurrentUser();
         if (!currentUser) {
-            return { success: false, message: "Not authorized" };
+            return { success: false, message: "You must be logged in to update an event type." };
         }
         const validation = createEventSchema.safeParse(data);
         if (!validation.success) {
-            return { success: false, message: "Invalid data provided" };
+            const formattedErrors = validation.error.flatten().fieldErrors;
+            const firstErrorMsg = Object.values(formattedErrors).flat().find(Boolean);
+            return { 
+                success: false, 
+                message: firstErrorMsg || "Invalid event data provided.",
+                errors: formattedErrors
+            };
         }
         let { title, description, duration, platform, location, minNoticeMins, rollingWindowDays } = validation.data;
         const slug = generateSlug(title);
         const fullSlug = `${currentUser.username}/${slug}`;
+        
         const existingEvent = await prisma.event.findUnique({
             where: {
                 eventId: eventId,
             },
         });
         if (!existingEvent) {
-            return { success: false, message: "Event type not found" };
+            return { success: false, message: "Event type not found." };
         }
         if (existingEvent.hostId !== parseInt(currentUser.id)) {
-            return { success: false, message: "Not authorized" };
+            return { success: false, message: "You are not authorized to update this event type." };
         }
+
+        // Check if updating the title results in a duplicate slug for another event of this user
+        const duplicateEvent = await prisma.event.findFirst({
+            where: {
+                slug: fullSlug,
+                NOT: {
+                    eventId: eventId,
+                },
+            },
+        });
+        if (duplicateEvent) {
+            return { success: false, message: `An event type named "${title}" already exists on your account. Please choose a different title.` };
+        }
+
         const updatedEvent = await prisma.event.update({
             where: {
                 eventId: eventId,
@@ -113,9 +136,12 @@ export async function updateEvent(eventId: number, data: z.infer<typeof createEv
             }
         });
         return { success: true, eventType: updatedEvent };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error updating event type:", error);
-        return { success: false, message: "An unexpected error occurred" };
+        if (error?.code === 'P2002') {
+            return { success: false, message: `An event type with a similar name already exists on your account.` };
+        }
+        return { success: false, message: "An unexpected error occurred while updating the event type." };
     }
 }
 
@@ -141,14 +167,21 @@ export async function deleteEvent(eventId: number) {
                 eventId: eventId,
             },
         });
-        return { success: true, message: "Event type deleted successfully" };
-    } catch (error) {
+        return { success: true, message: "Event type deleted successfully." };
+    } catch (error: any) {
         console.error("Error deleting event type:", error);
-        return { success: false, message: "An unexpected error occurred" };
+        if (error?.code === 'P2003' || error?.code === 'P2014') {
+            return { 
+                success: false, 
+                message: "Cannot delete this event type because it has existing bookings. Please cancel or delete all bookings first." 
+            };
+        }
+        return { success: false, message: "An unexpected error occurred while deleting the event type." };
     }
 }
 
 type EventDao = {
+    eventId: number;
     title: string;
     description: string | null;
     durationMins: number;
@@ -183,6 +216,7 @@ export async function getEventById(eventId: number): Promise<EventDaoResponse> {
             return { success: false, message: "Not authorized" };
         }
         const toReturn: EventDao = {
+            eventId: existingEvent.eventId,
             title: existingEvent.title,
             description: existingEvent.description,
             durationMins: existingEvent.durationMins,
@@ -217,6 +251,7 @@ export async function getMyEvents(): Promise<EventsResponse | Response> {
         const toReturn: EventDao[] = [];
         for (let i = 0; i < events.length; ++i) {
             toReturn.push({
+                eventId: events[i].eventId,
                 title: events[i].title,
                 description: events[i].description,
                 durationMins: events[i].durationMins,
@@ -260,12 +295,14 @@ export async function updateAvailability(data: z.infer<typeof weeklyAvailability
     try {
         const currentUser = await getCurrentUser();
         if (!currentUser) {
-            return { success: false, message: "Not authorized" };
+            return { success: false, message: "You must be logged in to update your availability schedule." };
         }
 
         const parseResult = weeklyAvailabilitySchema.safeParse(data);
         if (!parseResult.success) {
-            return { success: false, message: "Invalid availability data" };
+            const formattedErrors = parseResult.error.flatten().fieldErrors;
+            const firstErrorMsg = Object.values(formattedErrors).flat().find(Boolean);
+            return { success: false, message: firstErrorMsg || "Invalid availability schedule data provided." };
         }
 
         const userId = parseInt(currentUser.id);
@@ -277,6 +314,16 @@ export async function updateAvailability(data: z.infer<typeof weeklyAvailability
             for (const interval of dayItem.intervals) {
                 const [startH, startM] = interval.startTime.split(':').map(Number);
                 const [endH, endM] = interval.endTime.split(':').map(Number);
+
+                const startTotalMins = startH * 60 + startM;
+                const endTotalMins = endH * 60 + endM;
+
+                if (startTotalMins >= endTotalMins) {
+                    return { 
+                        success: false, 
+                        message: `Invalid time slot (${interval.startTime} - ${interval.endTime}): Start time must be before end time.` 
+                    };
+                }
 
                 const startDate = new Date(Date.UTC(1970, 0, 1, startH, startM, 0));
                 const endDate = new Date(Date.UTC(1970, 0, 1, endH, endM, 0));
@@ -325,8 +372,8 @@ export async function getMyBookings() {
         });
 
         const formattedBookings = bookings.map((b) => ({
-            id: `bk_${b.bookingId}`,
-            eventTypeId: `evt_${b.eventId}`,
+            id: String(b.bookingId),
+            eventTypeId: String(b.eventId),
             eventTitle: b.event.title,
             guestName: b.guestName,
             guestEmail: b.guestEmail,
@@ -337,7 +384,7 @@ export async function getMyBookings() {
             platform: b.event.platform as any,
             meetingUrl: b.meetingUrl || '',
             syncedWithGoogle: b.synced,
-            notes: '',
+            notes: b.notes || '',
         }));
 
         return { success: true, bookings: formattedBookings };

@@ -5,7 +5,7 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAppStore } from '@/lib/useStore';
-import { EventType } from '@/lib/mockData';
+import { EventType } from '@/lib/useStore';
 import {
   createEventSchema,
   type CreateEventFormInput,
@@ -31,15 +31,6 @@ interface CreateEventModalProps {
 }
 
 const PLATFORM_OPTIONS = [
-  {
-    value: Platform.meet,
-    label: 'Google Meet',
-    description: 'Auto-generates Google Meet link upon booking.',
-    icon: <Video className="w-4 h-4 text-emerald-600" />,
-    bg: 'bg-emerald-100 border-emerald-200',
-    selected: 'bg-emerald-50/60 border-emerald-500 ring-1 ring-emerald-500',
-    checkBg: 'bg-emerald-600',
-  },
   {
     value: Platform.zoom,
     label: 'Zoom Video',
@@ -79,7 +70,7 @@ export default function CreateEventModal({ isOpen, onClose, initialEvent }: Crea
     setIsDeleting(true);
     setServerError(null);
     try {
-      const numericId = parseInt(initialEvent.id.replace(/^\D+/g, ''), 10) || 1;
+      const numericId = parseInt(initialEvent.id, 10);
       const res = await deleteEvent(numericId);
       if (res.success) {
         deleteEventType(initialEvent.id);
@@ -108,7 +99,7 @@ export default function CreateEventModal({ isOpen, onClose, initialEvent }: Crea
       title: '',
       description: '',
       duration: '30',
-      platform: Platform.meet,
+      platform: Platform.zoom,
       location: '',
       minNoticeMins: 240,
       rollingWindowDays: 60,
@@ -133,7 +124,7 @@ export default function CreateEventModal({ isOpen, onClose, initialEvent }: Crea
         title: '',
         description: '',
         duration: '30',
-        platform: Platform.meet,
+        platform: Platform.zoom,
         location: '',
         minNoticeMins: 240,
         rollingWindowDays: 60,
@@ -147,7 +138,7 @@ export default function CreateEventModal({ isOpen, onClose, initialEvent }: Crea
     setServerError(null);
     try {
       if (initialEvent) {
-        const numericId = parseInt(initialEvent.id.replace(/^\D+/g, ''), 10) || 1;
+        const numericId = parseInt(initialEvent.id, 10);
         const res = await updateEvent(numericId, data);
         if (res.success) {
           updateStoreEvent(initialEvent.id, {
@@ -167,7 +158,9 @@ export default function CreateEventModal({ isOpen, onClose, initialEvent }: Crea
         const res = await createEvent(data);
         if (res.success) {
           const slug = data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+          if(!res.eventType) return;
           addEventType({
+            id: String(res.eventType.eventId),
             title: data.title,
             slug,
             description: data.description,

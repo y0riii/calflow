@@ -29,7 +29,7 @@ export default function EmailNotificationsPreview() {
     endsAt: '2026-09-02T14:30:00Z',
     guestTimezone: 'America/New_York',
     meetingUrl: 'https://meet.google.com/abc-defg-hij',
-    platform: 'meet',
+    platform: 'zoom',
   };
 
   return (

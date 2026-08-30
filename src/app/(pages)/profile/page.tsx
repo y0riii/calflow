@@ -13,7 +13,6 @@ import {
   Mail,
   Globe,
   CheckCircle2,
-  Calendar as CalendarIcon,
   Video,
   Save,
   Check,
@@ -27,9 +26,6 @@ export default function ProfilePage() {
   const {
     user,
     updateUser,
-    googleCalendar,
-    setGoogleConnected,
-    toggleGoogleAutoSync,
     zoom,
     setZoomConnected,
     toggleZoomAutoGenerate,
@@ -289,86 +285,6 @@ export default function ProfilePage() {
 
           {/* Right Column: Connected Accounts & Sync Settings (5 cols) */}
           <div className="lg:col-span-5 space-y-6">
-            {/* Google Integration Card */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center text-white shrink-0">
-                    <CalendarIcon className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">Google Account</h3>
-                    <p className="text-[11px] text-slate-500">Google Calendar & Meet</p>
-                  </div>
-                </div>
-
-                {connectedIntegrations.includes('google') ? (
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold flex items-center space-x-1">
-                    <CheckCircle2 className="w-3 h-3" />
-                    <span>Connected</span>
-                  </span>
-                ) : (
-                  <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200 text-[10px] font-bold">
-                    Disconnected
-                  </span>
-                )}
-              </div>
-
-              {connectedIntegrations.includes('google') ? (
-                <div className="space-y-4">
-                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
-                    <span className="text-slate-500 font-semibold block text-[11px]">Status:</span>
-                    <span className="font-bold text-slate-900 block">Active Google Calendar Integration</span>
-                  </div>
-
-                  {/* Google Calendar Auto Sync Setting Toggle */}
-                  <div className="p-3 rounded-xl bg-blue-50/60 border border-blue-100 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900">
-                        Auto Sync with Google Calendar
-                      </span>
-                      <button
-                        type="button"
-                        onClick={toggleGoogleAutoSync}
-                        className={`w-9 h-5 rounded-full transition-colors relative flex items-center px-0.5 ${
-                          googleCalendar.autoSync ? 'bg-blue-600' : 'bg-slate-300'
-                        }`}
-                      >
-                        <div
-                          className={`w-4 h-4 rounded-full bg-white transition-transform shadow-sm ${
-                            googleCalendar.autoSync ? 'translate-x-4' : 'translate-x-0'
-                          }`}
-                        />
-                      </button>
-                    </div>
-                    <p className="text-[11px] text-slate-600 leading-relaxed">
-                      Automatically push new bookings and cancellations directly to your Google Calendar.
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => handleDisconnect('google')}
-                    disabled={isDisconnecting === 'google'}
-                    className="w-full py-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold hover:bg-rose-100 transition disabled:opacity-50"
-                  >
-                    {isDisconnecting === 'google' ? 'Disconnecting...' : 'Disconnect Google Account'}
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Connect your Google Workspace or Gmail account to sync bookings and auto-create Google Meet links.
-                  </p>
-                  <a
-                    href="/api/auth/google"
-                    className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-sm hover:bg-blue-500 transition block text-center"
-                  >
-                    Connect Google Account
-                  </a>
-                </div>
-              )}
-            </div>
-
             {/* Zoom Integration Card */}
             <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">

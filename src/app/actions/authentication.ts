@@ -24,42 +24,52 @@ export async function loginAction(data: LoginFormData): Promise<AuthResponse> {
 
   try {
     const user = await prisma.user.findUnique({ where: { email: email } });
-    if(!user) return { success: false, message: "Invalid email or password." };
+    if(!user) return { success: false, message: "There is no user with these credentials." };
     
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-    if (!isPasswordValid) return { success: false, message: "Invalid email or password." };
+    if (!isPasswordValid) return { success: false, message: "There is no user with these credentials." };
     
     const accessSecret = process.env.JWT_ACCESS_SECRET!;
     const refreshSecret = process.env.JWT_REFRESH_SECRET!;
     const accessExpiresIn = parseInt(process.env.ACCESS_TOKEN_EXPIRES_IN || '900', 10);
     
-    // Remember Me Logic:
-    // If true, token & cookie last 7 days. If false, token lasts 1 day but cookie deletes on browser close.
-    const refreshExpirationTime = parseInt(process.env.REFRESH_TOKEN_EXPIRES_IN || '604800', 10);
-    const ONE_DAY = 86400; 
-    
-    const tokenExpiresIn = remember ? refreshExpirationTime : ONE_DAY;
-    const accessCookieMaxAge = remember ? accessExpiresIn : undefined;
-    const refreshCookieMaxAge = remember ? refreshExpirationTime : undefined;
-    const accessToken = jwt.sign({ userId: user.userId, username: user.username, email: user.email }, accessSecret, { expiresIn: accessExpiresIn });
-    const refreshToken = jwt.sign({ userId: user.userId }, refreshSecret, { expiresIn: tokenExpiresIn });
     const cookieStore = await cookies();
+    const refreshExpirationTime = parseInt(process.env.REFRESH_TOKEN_EXPIRES_IN || '604800', 10);
     
-    cookieStore.set('accessToken', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: accessCookieMaxAge,
-    });
+    if (remember) {
+      const tokenExpiresIn = refreshExpirationTime;
+      const accessToken = jwt.sign({ userId: user.userId, username: user.username, email: user.email }, accessSecret, { expiresIn: accessExpiresIn });
+      const refreshToken = jwt.sign({ userId: user.userId }, refreshSecret, { expiresIn: tokenExpiresIn });
+      
+      cookieStore.set('accessToken', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: accessExpiresIn,
+      });
 
-    cookieStore.set('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: refreshCookieMaxAge,
-    });
+      cookieStore.set('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: refreshExpirationTime,
+      });
+    } else {
+      const ONE_DAY = 86400; 
+      const accessToken = jwt.sign({ userId: user.userId, username: user.username, email: user.email }, accessSecret, { expiresIn: ONE_DAY });
+      
+      cookieStore.set('accessToken', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        // omit maxAge so it's a session cookie (deleted when browser closes)
+      });
+      // Ensure no leftover refresh token exists
+      cookieStore.delete('refreshToken');
+    }
 
     return { success: true };
   } catch (error) {
@@ -106,20 +116,16 @@ export async function registerAction(data: RegisterFormData): Promise<AuthRespon
 
 // --- LOGOUT ACTION (With Blacklist) ---
 export async function logoutAction(): Promise<AuthResponse> {
-  try {
-    const cookieStore = await cookies();
-    const refreshToken = cookieStore.get('refreshToken')?.value;
+  const cookieStore = await cookies();
 
+  // Always clear cookies, even if blacklisting the token fails
+  try {
+    const refreshToken = cookieStore.get('refreshToken')?.value;
     if (refreshToken) {
-      // Decode the token to get its true expiration date
       const decoded = jwt.decode(refreshToken) as jwt.JwtPayload | null;
-      
-      // Calculate expiration date. Fallback to 7 days from now if decoding fails.
       const expiresAt = decoded?.exp 
         ? new Date(decoded.exp * 1000) 
         : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
-      // Add token to the Prisma blacklist
       await prisma.blacklistedToken.create({
         data: {
           token: refreshToken,
@@ -127,16 +133,20 @@ export async function logoutAction(): Promise<AuthResponse> {
         }
       });
     }
+  } catch (error) {
+    // Non-fatal: log and continue — cookies will still be cleared
+    console.error("Failed to blacklist refresh token (non-fatal):", error);
+  }
 
-    // Clear the cookies from the browser
+  try {
     cookieStore.delete('accessToken');
     cookieStore.delete('refreshToken');
-
-    return { success: true };
   } catch (error) {
-    console.error("Logout error:", error);
+    console.error("Failed to delete auth cookies:", error);
     return { success: false, message: "Failed to log out properly." };
   }
+
+  return { success: true };
 }
 
 export async function refreshTokenAction(): Promise<AuthResponse> {

@@ -17,7 +17,8 @@ export async function GET(request: Request) {
 
   const clientId = process.env.ZOOM_CLIENT_ID || "";
   const clientSecret = process.env.ZOOM_CLIENT_SECRET || "";
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/auth/zoom/callback`;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const redirectUri = `${appUrl}/api/auth/zoom/callback`;
 
   const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
 

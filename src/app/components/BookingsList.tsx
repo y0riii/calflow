@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAppStore } from '@/lib/useStore';
-import { Booking } from '@/lib/mockData';
+import { Booking } from '@/lib/useStore';
 import {
   Calendar,
   Clock,
@@ -21,6 +21,8 @@ import {
   Info,
   CheckCircle2,
 } from 'lucide-react';
+
+import { cancelBookingAction, rescheduleBookingAction } from '@/app/actions/bookings';
 
 export default function BookingsList() {
   const { bookings, cancelBooking, rescheduleBooking } = useAppStore();
@@ -60,9 +62,16 @@ export default function BookingsList() {
     return matchesSearch;
   });
 
-  const handleConfirmCancel = () => {
+  const handleConfirmCancel = async () => {
     if (selectedBookingForCancel) {
-      cancelBooking(selectedBookingForCancel.id, cancelReason || 'Canceled by host');
+      const numericId = parseInt(selectedBookingForCancel.id.replace(/\D+/g, ''), 10) || parseInt(selectedBookingForCancel.id, 10);
+      const reason = cancelReason || 'Canceled by host';
+      
+      cancelBooking(selectedBookingForCancel.id, reason);
+      if (numericId) {
+        await cancelBookingAction(numericId, reason);
+      }
+      
       setSelectedBookingForCancel(null);
       if (selectedBookingForDetails?.id === selectedBookingForCancel.id) {
         setSelectedBookingForDetails(null);
@@ -71,13 +80,18 @@ export default function BookingsList() {
     }
   };
 
-  const handleConfirmReschedule = () => {
+  const handleConfirmReschedule = async () => {
     if (selectedBookingForReschedule) {
       const newStartsAt = new Date(`${rescheduleDate}T${rescheduleTime}:00`).toISOString();
       const durationMins = 30;
       const newEndsAt = new Date(new Date(newStartsAt).getTime() + durationMins * 60000).toISOString();
+      const numericId = parseInt(selectedBookingForReschedule.id.replace(/\D+/g, ''), 10) || parseInt(selectedBookingForReschedule.id, 10);
 
       rescheduleBooking(selectedBookingForReschedule.id, newStartsAt, newEndsAt);
+      if (numericId) {
+        await rescheduleBookingAction(numericId, newStartsAt, newEndsAt);
+      }
+
       setSelectedBookingForReschedule(null);
       if (selectedBookingForDetails?.id === selectedBookingForReschedule.id) {
         setSelectedBookingForDetails(null);

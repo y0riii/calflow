@@ -21,7 +21,6 @@ enum Status {
 
 enum Platform {
   zoom
-  meet
   physical
 
   @@map("platform")

@@ -9,8 +9,6 @@ interface PageProps {
 
 function getPlatformInfo(platform: string) {
   switch (platform) {
-    case 'meet':
-      return { label: 'Google Meet', color: 'bg-emerald-50 border-emerald-200 text-emerald-700', icon: Video };
     case 'zoom':
       return { label: 'Zoom', color: 'bg-blue-50 border-blue-200 text-blue-700', icon: Video };
     case 'physical':
