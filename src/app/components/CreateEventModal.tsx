@@ -12,7 +12,7 @@ import {
   type CreateEventFormOutput,
 } from '@/app/schemas/events';
 import CustomInput from '@/app/components/CustomInput';
-import { createEvent, updateEvent, deleteEvent } from '@/app/actions/events';
+import { createEvent, updateEvent, deleteEvent, getAvailablity } from '@/app/actions/events';
 import { getConnectedIntegrationsAction } from '@/app/actions/integrations';
 import { Platform } from '@prisma/client';
 import {
@@ -62,9 +62,10 @@ const DURATION_OPTIONS = [
 ];
 
 export default function CreateEventModal({ isOpen, onClose, initialEvent }: CreateEventModalProps) {
-  const { addEventType, updateEventType: updateStoreEvent, deleteEventType, zoom, setZoomConnected } = useAppStore();
+  const { addEventType, updateEventType: updateStoreEvent, deleteEventType, zoom, setZoomConnected, setActiveTab } = useAppStore();
   const [serverError, setServerError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [hasAvailability, setHasAvailability] = useState(true);
 
   const handleDeleteEvent = async () => {
     if (!initialEvent || isDeleting) return;
@@ -138,6 +139,13 @@ export default function CreateEventModal({ isOpen, onClose, initialEvent }: Crea
           setZoomConnected(res.integrations.includes('zoom'));
         }
       });
+      getAvailablity().then((res) => {
+        const isAvail = Boolean(res.success && res.availability && res.availability.length > 0);
+        setHasAvailability(isAvail);
+        if (!isAvail) {
+          setServerError('You must set your availability schedule first before creating or updating an event type.');
+        }
+      });
     }
   }, [initialEvent, isOpen, reset, setZoomConnected]);
 
@@ -145,6 +153,10 @@ export default function CreateEventModal({ isOpen, onClose, initialEvent }: Crea
 
   const onSubmit: SubmitHandler<CreateEventFormOutput> = async (data) => {
     setServerError(null);
+    if (!hasAvailability) {
+      setServerError('You must set your availability schedule first before creating or updating an event type.');
+      return;
+    }
     if (data.platform === Platform.zoom && !zoom.connected) {
       setServerError('You must connect a Zoom account in Profile Settings before creating a Zoom event.');
       return;
@@ -228,9 +240,23 @@ export default function CreateEventModal({ isOpen, onClose, initialEvent }: Crea
         </div>
 
         {serverError && (
-          <div className="mx-6 mt-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center space-x-2">
-            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-            <span>{serverError}</span>
+          <div className="mx-6 mt-4 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{serverError}</span>
+            </div>
+            {!hasAvailability && (
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('availability');
+                  onClose();
+                }}
+                className="px-3 py-1 rounded-lg bg-rose-600 text-white font-bold text-[11px] hover:bg-rose-500 transition shrink-0 ml-2"
+              >
+                Set Schedule
+              </button>
+            )}
           </div>
         )}
 

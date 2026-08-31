@@ -98,6 +98,13 @@ export async function updateEvent(eventId: number, data: z.infer<typeof createEv
         if (!currentUser) {
             return { success: false, message: "You must be logged in to update an event type." };
         }
+
+        const availabilitiesCount = await prisma.availability.count({
+            where: { userId: parseInt(currentUser.id) }
+        });
+        if (availabilitiesCount === 0) {
+            return { success: false, message: "You must set your availability schedule first before updating an event type." };
+        }
         const validation = createEventSchema.safeParse(data);
         if (!validation.success) {
             const formattedErrors = validation.error.flatten().fieldErrors;

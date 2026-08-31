@@ -8,26 +8,33 @@ import BookingsList from '@/app/components/BookingsList';
 import AvailabilityEditor from '@/app/components/AvailabilityEditor';
 import { useAppStore } from '@/lib/useStore';
 import { EventType } from '@/lib/useStore';
-import { getMyEvents, getMyBookings } from '@/app/actions/events';
+import { getMyEvents, getMyBookings, getAvailablity } from '@/app/actions/events';
 import { getCurrentUser } from '@/app/actions/authentication';
 import { getConnectedIntegrationsAction } from '@/app/actions/integrations';
-import { Plus, Layers, Loader2 } from 'lucide-react';
+import { Plus, Layers, Loader2, AlertCircle } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { activeTab, eventTypes, setEventTypes, setBookings, bookings, user, updateUser, setZoomConnected } = useAppStore();
+  const { activeTab, setActiveTab, eventTypes, setEventTypes, setBookings, bookings, user, updateUser, setZoomConnected } = useAppStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventType | null>(null);
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
+  const [hasAvailability, setHasAvailability] = useState(true);
+  const [availabilityWarning, setAvailabilityWarning] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [eventsRes, bookingsRes, userRes, integrationsRes] = await Promise.all([
+        const [eventsRes, bookingsRes, userRes, integrationsRes, availabilityRes] = await Promise.all([
           getMyEvents(),
           getMyBookings(),
           getCurrentUser(),
           getConnectedIntegrationsAction(),
+          getAvailablity(),
         ]);
+
+        if (availabilityRes && availabilityRes.success) {
+          setHasAvailability(Boolean(availabilityRes.availability && availabilityRes.availability.length > 0));
+        }
 
         if (userRes) {
           updateUser({
@@ -72,18 +79,39 @@ export default function DashboardPage() {
       }
     }
     loadData();
-  }, [setEventTypes, setBookings, updateUser]);
+  }, [setEventTypes, setBookings, updateUser, setZoomConnected]);
 
   const upcomingBookingsCount = bookings.filter(
     (b) => b.status === 'confirmed' && new Date(b.startsAt).getTime() >= Date.now()
   ).length;
 
-  const handleOpenCreateModal = () => {
+  const checkAvailabilityBeforeModal = async (): Promise<boolean> => {
+    const res = await getAvailablity();
+    const isAvail = Boolean(res.success && res.availability && res.availability.length > 0);
+    setHasAvailability(isAvail);
+    return isAvail;
+  };
+
+  const handleOpenCreateModal = async () => {
+    const isAvail = await checkAvailabilityBeforeModal();
+    if (!isAvail) {
+      setAvailabilityWarning("You must set your availability schedule first before creating an event type.");
+      setActiveTab('availability');
+      return;
+    }
+    setAvailabilityWarning(null);
     setEditingEvent(null);
     setIsModalOpen(true);
   };
 
-  const handleEditEvent = (event: EventType) => {
+  const handleEditEvent = async (event: EventType) => {
+    const isAvail = await checkAvailabilityBeforeModal();
+    if (!isAvail) {
+      setAvailabilityWarning("You must set your availability schedule first before editing an event type.");
+      setActiveTab('availability');
+      return;
+    }
+    setAvailabilityWarning(null);
     setEditingEvent(event);
     setIsModalOpen(true);
   };
@@ -146,6 +174,24 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
+
+        {availabilityWarning && (
+          <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between shadow-sm">
+            <div className="flex items-center space-x-2.5">
+              <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+              <div>
+                <span className="font-bold block text-amber-900">Availability Schedule Required</span>
+                <span className="text-amber-700">{availabilityWarning}</span>
+              </div>
+            </div>
+            <button
+              onClick={() => setAvailabilityWarning(null)}
+              className="text-amber-700 hover:text-amber-900 text-xs font-semibold px-2 py-1 rounded-lg hover:bg-amber-100 transition"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {/* Tab 1: Event Types */}
         {activeTab === 'events' && (
