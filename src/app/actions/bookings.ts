@@ -1,5 +1,8 @@
 'use server';
 
+import dns from 'dns';
+import { promisify } from 'util';
+
 import { prisma } from "@/lib/prisma";
 import {
     sendBookingCreatedEmails,
@@ -27,14 +30,29 @@ export async function createBookingAction(data: CreateBookingInput): Promise<Cre
         if (!parsed.success) {
             const formattedErrors = parsed.error.flatten().fieldErrors;
             const firstErrorMsg = Object.values(formattedErrors).flat().find(Boolean);
-            return { 
-                success: false, 
+            return {
+                success: false,
                 message: firstErrorMsg || "Invalid booking details provided.",
                 errors: formattedErrors
             };
         }
 
         const { eventId, hostId, guestName, guestEmail, guestTimezone, startsAt, endsAt, notes } = parsed.data;
+
+        // Verify that the guest email domain has MX records
+        try {
+            const resolveMx = promisify(dns.resolveMx);
+            const spl = guestEmail.split('@');
+            const domain = spl[spl.length - 1];
+            if (domain) {
+                const mxRecords = await resolveMx(domain);
+                if (!mxRecords || mxRecords.length === 0) {
+                    return { success: false, message: "The email address provided is invalid or cannot receive emails." };
+                }
+            }
+        } catch (error) {
+            return { success: false, message: "The email address provided is invalid or the domain does not exist." };
+        }
 
         // Check the event still exists along with host details
         const event = await prisma.event.findUnique({
@@ -67,18 +85,18 @@ export async function createBookingAction(data: CreateBookingInput): Promise<Cre
         const noticeDeadline = new Date(now.getTime() + event.minNoticeMins * 60000);
         if (bookingStart < noticeDeadline) {
             const noticeHours = Math.round(event.minNoticeMins / 60);
-            return { 
-                success: false, 
-                message: `This event requires at least ${noticeHours} hour${noticeHours === 1 ? '' : 's'} advance notice.` 
+            return {
+                success: false,
+                message: `This event requires at least ${noticeHours} hour${noticeHours === 1 ? '' : 's'} advance notice.`
             };
         }
 
         const maxBookingDate = new Date();
         maxBookingDate.setDate(maxBookingDate.getDate() + event.rollingWindowDays);
         if (bookingStart > maxBookingDate) {
-            return { 
-                success: false, 
-                message: `Bookings for this event are only accepted up to ${event.rollingWindowDays} days in advance.` 
+            return {
+                success: false,
+                message: `Bookings for this event are only accepted up to ${event.rollingWindowDays} days in advance.`
             };
         }
 
@@ -117,7 +135,7 @@ export async function createBookingAction(data: CreateBookingInput): Promise<Cre
                     });
                     meetingUrl = result.meetingUrl;
                     providerEventId = result.providerEventId;
-                    
+
                     if (result.newRefreshToken && result.newRefreshToken !== zoomAccount.refreshToken) {
                         await prisma.oauthAccount.update({
                             where: { oauthAccountId: zoomAccount.oauthAccountId },
@@ -153,10 +171,10 @@ export async function createBookingAction(data: CreateBookingInput): Promise<Cre
             },
         });
 
-        const locationLabel = meetingUrl 
+        const locationLabel = meetingUrl
             ? `<a href="${meetingUrl}" style="color:#2563eb;word-break:break-all;">${meetingUrl}</a>`
             : event.platform === 'zoom' ? 'Zoom Video (Pending Link)'
-            : event.location || 'In-Person Meeting';
+                : event.location || 'In-Person Meeting';
 
         // Trigger emails (await to ensure execution in serverless environments like Vercel)
         await sendBookingCreatedEmails({
@@ -196,10 +214,10 @@ function getTimezoneOffset(timeZone: string, date: Date): number {
         const parts = formatter.formatToParts(date);
         const map: Record<string, string> = {};
         parts.forEach(p => map[p.type] = p.value);
-        
+
         let hour = parseInt(map.hour);
         if (hour === 24) hour = 0;
-        
+
         const localDate = new Date(Date.UTC(
             parseInt(map.year),
             parseInt(map.month) - 1,
@@ -208,7 +226,7 @@ function getTimezoneOffset(timeZone: string, date: Date): number {
             parseInt(map.minute),
             parseInt(map.second)
         ));
-        
+
         return (localDate.getTime() - date.getTime()) / 60000;
     } catch (e) {
         console.error("Error calculating timezone offset:", e);
@@ -468,10 +486,10 @@ export async function cancelBookingAction(bookingId: number, reason: string) {
             }
         });
 
-        const locationLabel = booking.meetingUrl 
+        const locationLabel = booking.meetingUrl
             ? `<a href="${booking.meetingUrl}" style="color:#2563eb;word-break:break-all;">${booking.meetingUrl}</a>`
             : booking.event.platform === 'zoom' ? 'Zoom Video'
-            : booking.event.location || 'In-Person Meeting';
+                : booking.event.location || 'In-Person Meeting';
 
         if (booking.providerEventId && booking.event.platform === 'zoom') {
             const zoomAccount = await prisma.oauthAccount.findUnique({
@@ -556,18 +574,18 @@ export async function rescheduleBookingAction(bookingId: number, newStartsAt: st
         const noticeDeadline = new Date(now.getTime() + booking.event.minNoticeMins * 60000);
         if (newStart < noticeDeadline) {
             const noticeHours = Math.round(booking.event.minNoticeMins / 60);
-            return { 
-                success: false, 
-                message: `Rescheduling requires at least ${noticeHours} hour${noticeHours === 1 ? '' : 's'} advance notice.` 
+            return {
+                success: false,
+                message: `Rescheduling requires at least ${noticeHours} hour${noticeHours === 1 ? '' : 's'} advance notice.`
             };
         }
 
         const maxBookingDate = new Date();
         maxBookingDate.setDate(maxBookingDate.getDate() + booking.event.rollingWindowDays);
         if (newStart > maxBookingDate) {
-            return { 
-                success: false, 
-                message: `Bookings for this event are only accepted up to ${booking.event.rollingWindowDays} days in advance.` 
+            return {
+                success: false,
+                message: `Bookings for this event are only accepted up to ${booking.event.rollingWindowDays} days in advance.`
             };
         }
 
@@ -623,10 +641,10 @@ export async function rescheduleBookingAction(bookingId: number, newStartsAt: st
             }
         }
 
-        const locationLabel = booking.meetingUrl 
+        const locationLabel = booking.meetingUrl
             ? `<a href="${booking.meetingUrl}" style="color:#2563eb;word-break:break-all;">${booking.meetingUrl}</a>`
             : booking.event.platform === 'zoom' ? 'Zoom Video'
-            : booking.event.location || 'In-Person Meeting';
+                : booking.event.location || 'In-Person Meeting';
 
         // Trigger reschedule emails (await to ensure execution in serverless environments like Vercel)
         await sendBookingRescheduledEmails({

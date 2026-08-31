@@ -1,6 +1,8 @@
 'use server'
 
 import { cookies } from 'next/headers';
+import dns from 'dns';
+import { promisify } from 'util';
 import { loginSchema, registerSchema } from "../schemas/authentication";
 import { z } from "zod";
 import { prisma } from '../../lib/prisma';
@@ -83,6 +85,21 @@ export async function registerAction(data: RegisterFormData): Promise<AuthRespon
   if (!validation.success) return { success: false, message: "Invalid form data provided." };
 
   const { username, email, password } = validation.data;
+
+  // Verify that the email domain actually has MX records (can receive mail)
+  try {
+    const resolveMx = promisify(dns.resolveMx);
+    const spl = email.split('@');
+    const domain = spl[spl.length - 1];
+    if (domain) {
+      const mxRecords = await resolveMx(domain);
+      if (!mxRecords || mxRecords.length === 0) {
+        return { success: false, message: "The email address provided is invalid or cannot receive emails." };
+      }
+    }
+  } catch (error) {
+    return { success: false, message: "The email address provided is invalid or the domain does not exist." };
+  }
 
   try {
     const existingUser = await prisma.user.findFirst({ 
@@ -289,13 +306,7 @@ export async function updateUserAction(data: { username?: string; email?: string
     }
 
     if (data.email && data.email !== currentUser.email) {
-      const existingEmail = await prisma.user.findFirst({
-        where: { email: data.email, NOT: { userId } },
-      });
-      if (existingEmail) {
-        return { success: false, message: "Email is already in use." };
-      }
-      updateData.email = data.email;
+      return { success: false, message: "Email addresses cannot be updated." };
     }
 
     if (data.timezone && data.timezone !== currentUser.timezone) {
