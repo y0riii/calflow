@@ -93,6 +93,7 @@ model Booking {
   synced        Boolean  @default(false)
   notes         String?  @db.VarChar(2000)
   cancelReason  String?  @db.VarChar(1000)
+  reminderSent  Boolean  @default(false)
   createdAt     DateTime @default(now()) @db.Timestamptz()
   updatedAt     DateTime @updatedAt @db.Timestamptz()
 

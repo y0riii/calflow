@@ -529,6 +529,8 @@ export async function rescheduleBookingAction(bookingId: number, newStartsAt: st
                         title: true,
                         platform: true,
                         location: true,
+                        minNoticeMins: true,
+                        rollingWindowDays: true,
                     }
                 },
                 host: {
@@ -542,6 +544,31 @@ export async function rescheduleBookingAction(bookingId: number, newStartsAt: st
 
         if (!booking) {
             return { success: false, message: "Booking not found." };
+        }
+
+        const newStart = new Date(newStartsAt);
+        const now = new Date();
+
+        if (newStart <= now) {
+            return { success: false, message: "Cannot reschedule to a time slot in the past." };
+        }
+
+        const noticeDeadline = new Date(now.getTime() + booking.event.minNoticeMins * 60000);
+        if (newStart < noticeDeadline) {
+            const noticeHours = Math.round(booking.event.minNoticeMins / 60);
+            return { 
+                success: false, 
+                message: `Rescheduling requires at least ${noticeHours} hour${noticeHours === 1 ? '' : 's'} advance notice.` 
+            };
+        }
+
+        const maxBookingDate = new Date();
+        maxBookingDate.setDate(maxBookingDate.getDate() + booking.event.rollingWindowDays);
+        if (newStart > maxBookingDate) {
+            return { 
+                success: false, 
+                message: `Bookings for this event are only accepted up to ${booking.event.rollingWindowDays} days in advance.` 
+            };
         }
 
         const oldStartsAt = booking.startsAt;
@@ -570,6 +597,7 @@ export async function rescheduleBookingAction(bookingId: number, newStartsAt: st
                 startsAt: new Date(newStartsAt),
                 endsAt: new Date(newEndsAt),
                 status: 'confirmed',
+                reminderSent: false,
             }
         });
 

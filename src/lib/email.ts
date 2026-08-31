@@ -265,3 +265,64 @@ export async function sendBookingCancelledEmails(booking: BookingDetails, reason
     console.error('Error building/sending booking cancelled emails:', error);
   }
 }
+
+export async function sendBookingReminderEmails(booking: BookingDetails): Promise<void> {
+  try {
+    const links = manageLinks(booking.bookingId);
+
+    const makeTable = (tz?: string) => `
+      <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:16px 0;">
+        ${detailRow('Event', booking.eventTitle)}
+        ${detailRow('Date & Time', formatDate(booking.startsAt, tz))}
+        ${detailRow('Duration', `Until ${formatDate(booking.endsAt, tz)}`)}
+        ${detailRow(booking.meetingUrl ? 'Meeting Link' : 'Location', booking.locationLabel)}
+        ${booking.notes ? detailRow('Notes', booking.notes) : ''}
+        ${detailRow('Reschedule', `<a href="${links.reschedule}" style="color:#2563eb;font-weight:600;word-break:break-all;">${links.reschedule}</a>`)}
+        ${detailRow('Cancel', `<a href="${links.cancel}" style="color:#dc2626;font-weight:600;word-break:break-all;">${links.cancel}</a>`)}
+      </table>`;
+
+    const zoomButton = booking.meetingUrl 
+      ? actionButton('Join Zoom Meeting', booking.meetingUrl, '#2563eb')
+      : '';
+
+    const guestHtml = baseTemplate(
+      `Reminder: Upcoming meeting`,
+      '#2563eb',
+      `<p style="margin:0 0 16px;color:#334155;font-size:15px;">Hi <strong>${booking.guestName}</strong>,</p>
+       <p style="margin:0 0 20px;color:#475569;font-size:14px;line-height:1.6;">
+         This is a reminder for your upcoming appointment with <strong>${booking.hostName}</strong> in 3 hours.
+       </p>
+       <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:24px;">
+         ${makeTable(booking.guestTimezone)}
+       </div>
+       ${zoomButton}
+       <p style="margin:16px 0 12px;color:#475569;font-size:13px;font-weight:600;">Need to make changes?</p>
+       ${actionButton('Reschedule', links.reschedule, '#2563eb')}
+       ${actionButton('Cancel', links.cancel, '#dc2626')}`
+    );
+
+    const hostHtml = baseTemplate(
+      `Reminder: Upcoming meeting`,
+      '#7c3aed',
+      `<p style="margin:0 0 16px;color:#334155;font-size:15px;">Hi <strong>${booking.hostName}</strong>,</p>
+       <p style="margin:0 0 20px;color:#475569;font-size:14px;line-height:1.6;">
+         This is a reminder for your upcoming appointment with <strong>${booking.guestName}</strong> in 3 hours.
+       </p>
+       <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:24px;">
+         ${makeTable()}
+       </div>
+       ${zoomButton}
+       <p style="margin:16px 0 12px;color:#475569;font-size:13px;font-weight:600;">Manage Booking</p>
+       ${actionButton('Reschedule', links.reschedule, '#7c3aed')}
+       ${actionButton('Cancel', links.cancel, '#dc2626')}`
+    );
+
+    await Promise.all([
+      sendEmail(booking.guestEmail, `Reminder: ${booking.eventTitle} with ${booking.hostName}`, guestHtml),
+      sendEmail(booking.hostEmail, `Reminder: ${booking.eventTitle} with ${booking.guestName}`, hostHtml),
+    ]);
+  } catch (error) {
+    console.error('Error building/sending booking reminder emails:', error);
+  }
+}
+
