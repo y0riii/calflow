@@ -394,6 +394,8 @@ export async function updateAvailability(data: z.infer<typeof weeklyAvailability
     }
 }
 
+// Get bookings of logged in user
+
 export async function getMyBookings() {
     try {
         const currentUser = await getCurrentUser();
