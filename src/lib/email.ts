@@ -290,7 +290,7 @@ export async function sendBookingReminderEmails(booking: BookingDetails): Promis
       '#2563eb',
       `<p style="margin:0 0 16px;color:#334155;font-size:15px;">Hi <strong>${booking.guestName}</strong>,</p>
        <p style="margin:0 0 20px;color:#475569;font-size:14px;line-height:1.6;">
-         This is a reminder for your upcoming appointment with <strong>${booking.hostName}</strong> in 3 hours.
+         This is a reminder for your upcoming appointment with <strong>${booking.hostName}</strong> in the next 24 hours.
        </p>
        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:24px;">
          ${makeTable(booking.guestTimezone)}
@@ -306,7 +306,7 @@ export async function sendBookingReminderEmails(booking: BookingDetails): Promis
       '#7c3aed',
       `<p style="margin:0 0 16px;color:#334155;font-size:15px;">Hi <strong>${booking.hostName}</strong>,</p>
        <p style="margin:0 0 20px;color:#475569;font-size:14px;line-height:1.6;">
-         This is a reminder for your upcoming appointment with <strong>${booking.guestName}</strong> in 3 hours.
+         This is a reminder for your upcoming appointment with <strong>${booking.guestName}</strong> in the next 24 hours.
        </p>
        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:24px;">
          ${makeTable()}

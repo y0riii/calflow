@@ -5,15 +5,15 @@ import { sendBookingReminderEmails } from '@/lib/email';
 export async function GET(req: Request) {
   try {
     const now = new Date();
-    // 3 hours and 15 mins from now to catch them early enough if cron runs every 15 mins
-    const threeHoursFromNow = new Date(now.getTime() + (3 * 60 * 60 * 1000) + (15 * 60 * 1000));
+    // 25 hours from now to safely catch bookings in the next 24 hours if the cron runs once a day
+    const twentyFiveHoursFromNow = new Date(now.getTime() + (25 * 60 * 60 * 1000));
     
     const upcomingBookings = await prisma.booking.findMany({
       where: {
         status: 'confirmed',
         reminderSent: false,
         startsAt: {
-          lte: threeHoursFromNow,
+          lte: twentyFiveHoursFromNow,
           gt: now, // don't send if it's already in the past
         }
       },
