@@ -45,6 +45,23 @@ export async function createEvent(data: z.infer<typeof createEventSchema>) {
             };
         }
         let { title, description, duration, platform, location, minNoticeMins, rollingWindowDays } = validation.data;
+
+        if (platform === 'zoom') {
+            const zoomAccount = await prisma.oauthAccount.findUnique({
+                where: {
+                    userId_provider: {
+                        userId: parseInt(currentUser.id),
+                        provider: 'zoom',
+                    },
+                },
+            });
+            if (!zoomAccount) {
+                return {
+                    success: false,
+                    message: "You must connect a Zoom account in Profile Settings before creating a Zoom event.",
+                };
+            }
+        }
         const slug = generateSlug(title);
         const fullSlug = `${currentUser.username}/${slug}`;
         const existingEvent = await prisma.event.findFirst({
@@ -92,6 +109,23 @@ export async function updateEvent(eventId: number, data: z.infer<typeof createEv
             };
         }
         let { title, description, duration, platform, location, minNoticeMins, rollingWindowDays } = validation.data;
+
+        if (platform === 'zoom') {
+            const zoomAccount = await prisma.oauthAccount.findUnique({
+                where: {
+                    userId_provider: {
+                        userId: parseInt(currentUser.id),
+                        provider: 'zoom',
+                    },
+                },
+            });
+            if (!zoomAccount) {
+                return {
+                    success: false,
+                    message: "You must connect a Zoom account in Profile Settings before setting the platform to Zoom.",
+                };
+            }
+        }
         const slug = generateSlug(title);
         const fullSlug = `${currentUser.username}/${slug}`;
         

@@ -13,6 +13,7 @@ import {
 } from '@/app/schemas/events';
 import CustomInput from '@/app/components/CustomInput';
 import { createEvent, updateEvent, deleteEvent } from '@/app/actions/events';
+import { getConnectedIntegrationsAction } from '@/app/actions/integrations';
 import { Platform } from '@prisma/client';
 import {
   X,
@@ -61,7 +62,7 @@ const DURATION_OPTIONS = [
 ];
 
 export default function CreateEventModal({ isOpen, onClose, initialEvent }: CreateEventModalProps) {
-  const { addEventType, updateEventType: updateStoreEvent, deleteEventType } = useAppStore();
+  const { addEventType, updateEventType: updateStoreEvent, deleteEventType, zoom, setZoomConnected } = useAppStore();
   const [serverError, setServerError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -130,12 +131,24 @@ export default function CreateEventModal({ isOpen, onClose, initialEvent }: Crea
         rollingWindowDays: 60,
       });
     }
-  }, [initialEvent, isOpen, reset]);
+
+    if (isOpen) {
+      getConnectedIntegrationsAction().then((res) => {
+        if (res.success && res.integrations) {
+          setZoomConnected(res.integrations.includes('zoom'));
+        }
+      });
+    }
+  }, [initialEvent, isOpen, reset, setZoomConnected]);
 
   const selectedPlatform = watch('platform');
 
   const onSubmit: SubmitHandler<CreateEventFormOutput> = async (data) => {
     setServerError(null);
+    if (data.platform === Platform.zoom && !zoom.connected) {
+      setServerError('You must connect a Zoom account in Profile Settings before creating a Zoom event.');
+      return;
+    }
     try {
       if (initialEvent) {
         const numericId = parseInt(initialEvent.id, 10);
@@ -312,6 +325,22 @@ export default function CreateEventModal({ isOpen, onClose, initialEvent }: Crea
               </div>
               {errors.platform && (
                 <p className="mt-1.5 text-xs text-rose-600 font-medium">{errors.platform.message}</p>
+              )}
+
+              {selectedPlatform === Platform.zoom && !zoom.connected && (
+                <div className="mt-3 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start space-x-2.5">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block text-amber-900">Zoom Account Required</span>
+                    <p className="text-[11px] text-amber-700 mt-0.5">
+                      You have not connected a Zoom account yet. Please connect your Zoom account in{' '}
+                      <a href="/profile" target="_blank" className="font-bold underline hover:text-amber-900">
+                        Profile Settings
+                      </a>{' '}
+                      before creating a Zoom meeting event.
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
 

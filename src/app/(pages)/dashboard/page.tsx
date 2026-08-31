@@ -10,10 +10,11 @@ import { useAppStore } from '@/lib/useStore';
 import { EventType } from '@/lib/useStore';
 import { getMyEvents, getMyBookings } from '@/app/actions/events';
 import { getCurrentUser } from '@/app/actions/authentication';
+import { getConnectedIntegrationsAction } from '@/app/actions/integrations';
 import { Plus, Layers, Loader2 } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { activeTab, eventTypes, setEventTypes, setBookings, bookings, user, updateUser } = useAppStore();
+  const { activeTab, eventTypes, setEventTypes, setBookings, bookings, user, updateUser, setZoomConnected } = useAppStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventType | null>(null);
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
@@ -21,10 +22,11 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [eventsRes, bookingsRes, userRes] = await Promise.all([
+        const [eventsRes, bookingsRes, userRes, integrationsRes] = await Promise.all([
           getMyEvents(),
           getMyBookings(),
           getCurrentUser(),
+          getConnectedIntegrationsAction(),
         ]);
 
         if (userRes) {
@@ -58,6 +60,10 @@ export default function DashboardPage() {
 
         if (bookingsRes.success && bookingsRes.bookings) {
           setBookings(bookingsRes.bookings as any);
+        }
+
+        if (integrationsRes.success && integrationsRes.integrations) {
+          setZoomConnected(integrationsRes.integrations.includes('zoom'));
         }
       } catch (err) {
         console.error('Failed to load data from DB:', err);
